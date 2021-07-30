@@ -28,10 +28,35 @@ func Register(c *fiber.Ctx) error {
 		Password: password,
 	}
 
+	if data["name"] == "" {
+		c.Status(fiber.StatusBadRequest)
+
+		return c.JSON(fiber.Map{
+			"message": "No name provided.",
+		})
+	}
+
+	if data["email"] == "" {
+		c.Status(fiber.StatusBadRequest)
+
+		return c.JSON(fiber.Map{
+			"message": "No email provided",
+		})
+	}
+	if data["password"] == "" {
+		c.Status(fiber.StatusBadRequest)
+
+		return c.JSON(fiber.Map{
+			"message": "No password provided.",
+		})
+	}
+
 	if err := database.DB.Where("email = ?", data["email"]).First(&user).Error; err != nil {
 
 		database.DB.Create(&user)
-		return c.JSON(user)
+		return c.JSON(fiber.Map{
+			"message": "You Successfully created a new user.",
+		})
 
 	} else {
 
