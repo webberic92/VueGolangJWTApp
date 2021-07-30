@@ -77,6 +77,22 @@ func Login(c *fiber.Ctx) error {
 	var user models.User
 	database.DB.Where("email = ?", data["email"]).First(&user)
 
+	if data["email"] == "" {
+		c.Status(fiber.StatusBadRequest)
+
+		return c.JSON(fiber.Map{
+			"message": "Email can not be blank",
+		})
+	}
+
+	if data["password"] == "" {
+		c.Status(fiber.StatusBadRequest)
+
+		return c.JSON(fiber.Map{
+			"message": "password can not be blank",
+		})
+	}
+
 	if user.Id == 0 {
 
 		c.Status(fiber.StatusNotFound)
