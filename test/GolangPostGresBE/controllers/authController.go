@@ -6,11 +6,14 @@ import (
 
 	"example.com/m/database"
 	"example.com/m/models"
+	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 
 	"context"
+	"net/http"
+	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -161,6 +164,60 @@ func KeyCloakLogin(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": token,
 	})
+}
+
+func TestTokenIsValid(c *fiber.Ctx) error {
+
+	configURL := "http://localhost:8080/auth/realms/vueapp"
+	ctx := context.Background()
+	provider, err := oidc.NewProvider(ctx, configURL)
+	if err != nil {
+		panic(err)
+	}
+
+	clientID := "vueapp2"
+	clientSecret := "214a04bb-80cb-4ba4-8249-ad60f609e41f"
+
+	redirectURL := "http://localhost:8080/demo/callback"
+	// Configure an OpenID Connect aware OAuth2 client.
+	oauth2Config := oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURL:  redirectURL,
+		// Discovery returns the OAuth2 endpoints.
+		Endpoint: provider.Endpoint(),
+		// "openid" is a required scope for OpenID Connect flows.
+		Scopes: []string{oidc.ScopeOpenID, "profile", "email"},
+	}
+	state := "somestate"
+
+	oidcConfig := &oidc.Config{
+		ClientID: clientID,
+	}
+	verifier := provider.Verifier(oidcConfig)
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		rawAccessToken := r.Header.Get("Authorization")
+		if rawAccessToken == "" {
+			http.Redirect(w, r, oauth2Config.AuthCodeURL(state), http.StatusFound)
+			return
+		}
+
+		parts := strings.Split(rawAccessToken, " ")
+		if len(parts) != 2 {
+			w.WriteHeader(400)
+			return
+		}
+		_, err := verifier.Verify(ctx, parts[1])
+
+		if err != nil {
+			http.Redirect(w, r, oauth2Config.AuthCodeURL(state), http.StatusFound)
+			return
+		}
+
+		w.Write([]byte("hello world"))
+	})
+	return c.JSON("test")
 }
 
 func User(c *fiber.Ctx) error {

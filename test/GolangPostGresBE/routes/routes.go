@@ -12,4 +12,6 @@ func SetUp(app *fiber.App) {
 	app.Get("/api/user", controllers.User)
 	app.Post("/api/logout", controllers.Logout)
 	app.Post("/keycloak/login", controllers.KeyCloakLogin)
+	app.Post("/keycloak/testTokenIsValid", controllers.TestTokenIsValid)
+
 }
